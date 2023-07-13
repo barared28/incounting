@@ -1,0 +1,36 @@
+{
+  "required": "{{key}} is required",
+  "invalid": "{{key}} invalid",
+  "min": "{{key}} min {{val}} characters",
+  "not_same": "{{key}} did not same",
+  "please_wait": "Just a moment longer, we're preparing everything!",
+  "verify_loading": "Verifying user identity... Loading...",
+  "empty_data": "We apologize, no results can be displayed at the moment.",
+  "loading": "Please wait...",
+  "on_development": "Sorry, this page is still under development. We will be back soon with the latest updates. Thank you for your understanding.",
+  "on_development_redirect": "We're sorry, the page you're trying to access is currently under development. We suggest you to switch to the old page temporarily. If you want to continue to the old page, please click the 'Use Previous Version' button. Thank you for your understanding and support.",
+  "on_development_redirect_button": "Use Previous Version",
+  "cancel": "Cancel",
+  "save": "Save",
+  "close": "Close",
+  "login": {
+    "title": "Login",
+    "password": "Password",
+    "forgot": "Forgot Password",
+    "dont_have": "Don't have an account ?",
+    "create": "Create One"
+  },
+  "register": {
+    "title": "Register",
+    "password": "Password",
+    "phone_number": "Phone Number",
+    "password_confirm": "Password Confirmation",
+    "already": "Already Registered?",
+    "name": "Name"
+  },
+  "forgot_password": {
+    "title": "Forgot Password",
+    "submit": "Submit",
+    "back": "Back to page"
+  }
+}

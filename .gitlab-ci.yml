@@ -1,0 +1,148 @@
+stages:
+  - quality-check
+  - test
+  - build
+  - deploy
+
+variables:
+  TAG_LATEST: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:latest
+  TAG_COMMIT: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHORT_SHA
+  SSH_PORT: 717
+
+quality-check:
+  stage: quality-check
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
+  allow_failure: true
+  when: manual
+  only:
+    refs:
+      - master
+      # - dev
+      - devs
+  tags:
+    - devs-runner
+
+
+# digital-admin-panel-test:
+#   stage: test
+#   cache:
+#     - key:
+#         files:
+#           - package-lock.json
+#   when: manual
+#   image: node:16.3.0-slim
+#   before_script:
+#     - >
+#       apt-get update && apt-get install gconf-service libasound2 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgcc1 libgconf-2-4 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 ca-certificates fonts-liberation libappindicator1 libnss3 lsb-release xdg-utils wget -yq
+#   script:
+#     - npm ci
+#     - npm run test
+#   allow_failure: true
+#   tags:
+#      - devs-runner
+
+# build_image:
+#   image: docker:stable-dind
+#   stage: build
+#   before_script:
+#     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+#   script:
+#     - tag=":$CI_COMMIT_REF_SLUG-$CI_PIPELINE_CREATED_AT"
+#     - docker build --pull -t "$CI_REGISTRY_IMAGE${tag}" .
+#     - docker push "$CI_REGISTRY_IMAGE${tag}"
+#     # update gitlab variable TAG
+#     - echo pwd
+#     - echo "BUILD_TAG=$CI_REGISTRY_IMAGE${tag}" >> build.env
+#   rules:
+#     - if: $CI_COMMIT_BRANCH
+#       exists:
+#         - Dockerfile
+#   when: manual
+#   tags:
+#     - devs-runner
+#   artifacts:
+#     reports:
+#       dotenv: build.env
+
+build:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.0-debug
+    entrypoint: [""]
+  script:
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"},\"$CI_DEPENDENCY_PROXY_SERVER\":{\"auth\":\"$(printf "%s:%s" ${CI_DEPENDENCY_PROXY_USER} "${CI_DEPENDENCY_PROXY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${TAG_COMMIT}"
+  tags:
+    - devs-runner
+  when: manual
+
+deploy:
+  stage: deploy
+  image: docker:20.10.8-dind
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p 717 -H '194.233.82.87' >> ~/.ssh/known_hosts
+    - ssh-keyscan -p 717 -H '8.215.34.226' >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    #- ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - echo "$SSH_PRIVATE_KEY" | ssh-add -
+    - echo "$SSH_PRIVATE_KEY"| tr -d '\r' > ~/.ssh/id_rsa
+    - '[[ -f /.dockerinit ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    url: https://$CI_ENVIRONMENT_SLUG.digitels.me
+    on_stop: stop_review
+  script:
+    # - if ["$CI_COMMIT_BRANCH" == "devs"]; then "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SSH_USER@$SSH_HOST_DEVS"; "cd /home/gitlab-runner && yamlier edit ./docker-compose.yml services.devs_admin_panel.image $BUILD_TAG ./docker-compose.yml" fi
+    # - if ["$CI_COMMIT_BRANCH" == "devs"]; then  "ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SSH_USER@$SSH_HOST_DEVS"; "cd /home/gitlab-runner && docker-compose pull && docker-compose up -d devs_admin_panel" fi
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "dev" ]]; then
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SSH_USER@$SSH_HOST_DEV -p $SSH_PORT "cd /home/gitlab-runner && yamlier edit ./docker-compose.yml services.incounting_panel.image $TAG_COMMIT ./docker-compose.yml"
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SSH_USER@$SSH_HOST_DEV -p $SSH_PORT "cd /home/gitlab-runner && docker-compose pull && docker-compose up -d incounting_panel"
+      fi
+
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "devs" ]]; then
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SSH_USER@$SSH_HOST_DEVS -p $SSH_PORT "cd /home/gitlab-runner && yamlier edit ./docker-compose.yml services.incounting_panel.image $TAG_COMMIT ./docker-compose.yml"
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $SSH_USER@$SSH_HOST_DEVS -p $SSH_PORT "cd /home/gitlab-runner && docker-compose pull && docker-compose up -d incounting_panel"
+      fi
+
+    - |
+      if [[ "$CI_COMMIT_BRANCH" == "main" ]]; then
+        docker pull $TAG_COMMIT
+        docker tag $TAG_COMMIT $TAG_LATEST
+        docker push $TAG_LATEST
+      fi
+
+  when: manual
+  only:
+    - devs
+    - dev
+    - main
+  tags:
+    - shell-runner
+
+stop_review:
+  script:
+    - ./teardown-environment
+  when: manual
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    action: stop

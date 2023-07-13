@@ -1,0 +1,36 @@
+{
+  "required": "{{key}} wajib diisi",
+  "invalid": "{{key}} tidak valid",
+  "min": "{{key}} min {{val}} karakter",
+  "not_same": "{{key}} tidak sama",
+  "please_wait": "Tunggu sebentar lagi ya, kami sedang menyiapkan semuanya!",
+  "verify_loading": "Mengverifikasi identitas pengguna... Memuat...",
+  "loading": "Tunggu sebentar...",
+  "empty_data": "Mohon maaf, tidak ada hasil yang dapat ditampilkan",
+  "on_development": "Maaf, halaman ini masih dalam tahap pengembangan. Kami akan segera kembali dengan pembaruan terbaru. Terima kasih atas pengertiannya.",
+  "on_development_redirect": "Maaf, halaman yang Anda akses saat ini sedang dalam tahap pengembangan. Kami menyarankan Anda untuk beralih ke halaman lama sementara waktu. Apabila Anda ingin melanjutkan ke halaman lama, silakan klik tombol 'Beralih ke Halaman Lama'. Terima kasih atas pengertian dan dukungan Anda.",
+  "on_development_redirect_button": "Beralih ke Halaman Lama",
+  "cancel": "Batalkan",
+  "save": "Simpan",
+  "close": "Tutup",
+  "login": {
+    "title": "Masuk",
+    "password": "Kata Sandi",
+    "forgot": "Lupa Kata Sandi",
+    "dont_have": "Belum punya akun?",
+    "create": "Buat Akun"
+  },
+  "register": {
+    "title": "Daftar",
+    "password": "Kata Sandi",
+    "phone_number": "Nomor HP",
+    "password_confirm": "Konfirmasi Kata Sandi",
+    "already": "Sudah Mendaftar?",
+    "name": "Nama"
+  },
+  "forgot_password": {
+    "title": "Lupa Kata Sandi",
+    "submit": "Kirim",
+    "back": "Kembali ke halaman"
+  }
+}
